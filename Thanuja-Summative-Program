@@ -1,0 +1,543 @@
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% SNAKES AND LADDERS GAME - THANUJA ICS2O TURING SUMMATIVE %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% set the screen to be 800 by 800 pixels
+setscreen ("graphics:800;800")
+
+var board, roll, change, pick : int
+
+% upload picture of game board (created with google draw)
+board := Pic.FileNew ("Game-Board-6.jpg")
+
+var player : int
+
+var player1Pic, player1Sprite : int
+var player2Pic, player2Sprite : int
+
+% (x1, y1) are player1Sprite coordinates, (x2, y2) are player2Sprite coordinates
+var x1, x2, y1, y2 : int
+
+% boolean variables
+var up : boolean
+var win : boolean := false
+var EndIntro, ExitGame : boolean := false
+
+% used for Mouse.Where, to create 'buttons'
+var xMouse, yMouse, button : int
+
+% FONTS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+var fontTitle, fontEnd, font1, font2, font3, font4, font5 : int
+fontTitle := Font.New ("Ravie:65:bold")
+fontEnd := Font.New ("Arial:100:bold")
+font1 := Font.New ("Sans serif:50:bold")
+font2 := Font.New ("Sans serif:30:bold")
+font3 := Font.New ("Broadway:70:bold")
+font4 := Font.New ("Sans serif:20:bold")
+font5 := Font.New ("Broadway:45:bold")
+
+
+% AUDIO & MUSIC %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+var finishedIntro, finishedGame, finishedDice, finishedWalk, finishedSnake, finishedCheer, finishedEnd : boolean := false
+% Loop plays audio until 'finished' is true.
+process IntroMusic
+    loop
+        exit when finishedIntro
+        Music.PlayFile ("1_game-start.mp3")
+    end loop
+end IntroMusic
+
+process GameMusic
+    loop
+        exit when finishedGame
+        Music.PlayFile ("2_rainforest_ambience.mp3")
+    end loop
+end GameMusic
+
+process DiceSound
+    loop
+        exit when finishedDice
+        Music.PlayFile ("3_Roll-Dice.mp3")
+    end loop
+end DiceSound
+
+process WalkSound
+    loop
+        exit when finishedWalk
+        Music.PlayFile ("Cartoon-Walking.mp3")
+    end loop
+end WalkSound
+
+process SnakeSound
+    loop
+        exit when finishedSnake
+        Music.PlayFile ("5_ladder-losing.mp3")
+    end loop
+end SnakeSound
+
+
+process CheeringMusic
+    loop
+        exit when finishedCheer
+        Music.PlayFile ("6_crowd-cheers.mp3")
+    end loop
+end CheeringMusic
+
+
+process EndMusic
+    loop
+        exit when finishedEnd
+        Music.PlayFile ("7_end-game.mp3")
+    end loop
+end EndMusic
+
+
+
+
+% player 1 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+drawfilloval (60, 80, 20, 20, 41)
+drawfilloval (60, 10, 30, 10, 41)
+drawline (40, 10, 60, 80, 41)
+drawline (80, 10, 60, 80, 41)
+drawfill (60, 50, 41, 41)
+player1Pic := Pic.New (0, 0, 100, 100)
+cls
+player1Sprite := Sprite.New (player1Pic)
+
+% player 2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+drawfilloval (40, 80, 20, 20, purple)
+drawfilloval (40, 10, 30, 10, purple)
+drawline (20, 10, 40, 80, purple)
+drawline (60, 10, 40, 80, purple)
+drawfill (40, 50, purple, purple)
+player2Pic := Pic.New (0, 0, 100, 100)
+cls
+player2Sprite := Sprite.New (player2Pic)
+
+
+
+% DICE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+var blankDicePic, rollMe, fontDice, fontRoll, DiceSprite, DiceNum : int
+fontDice := Font.New ("Broadway:60:bold")
+fontRoll := Font.New ("Broadway:120")
+% box
+drawfillbox (500, 600, 650, 750, black)
+% left diagonal
+drawline (500, 750, 525, 775, black)
+% top
+drawline (525, 775, 675, 775, black)
+% right
+drawline (675, 775, 675, 625, black)
+% bottom diagonal
+drawline (650, 600, 675, 625, black)
+% fill
+drawfill (575, 760, black, black)
+% left diagonal border
+drawline (500, 750, 525, 775, 30)
+% top border
+drawline (525, 775, 675, 775, 30)
+% right diagonal border
+drawline (650, 750, 675, 775, 30)
+% right border
+drawline (675, 775, 675, 625, 30)
+% bottom diagonal border
+drawline (650, 600, 675, 625, 30)
+% box border
+drawbox (500, 600, 650, 750, 30)
+
+blankDicePic := Pic.New (500, 600, 700, 800)
+Font.Draw ("roll", 500, 670, fontDice, 30)
+Font.Draw ("me", 500, 610, fontDice, 30)
+rollMe := Pic.New (500, 600, 700, 800)
+DiceSprite := Sprite.New (rollMe)
+Sprite.SetPosition (DiceSprite, 500, 600, false)
+
+
+
+% PROCEDURES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+% displays to user who's turn it is
+procedure DisplayTurn
+    drawfillbox (95, 645, 460, 750, 100)
+    if pick mod 2 = 0 then
+        Font.Draw ("Your move", 100, 700, font5, purple)
+        Font.Draw ("player 2", 150, 650, font5, purple)
+    else
+        Font.Draw ("Your move", 100, 700, font5, 41)
+        Font.Draw ("player 1", 150, 650, font5, 41)
+    end if
+    player := Pic.New (95, 645, 460, 750)
+    Pic.Draw (player, 95, 645, picCopy)
+end DisplayTurn
+
+% DiceChange puts the 'roll' number onto the die, and saves it as a picture
+% the picture is then put into the sprite
+procedure DiceChange (var num : int)
+    finishedDice := false
+    fork DiceSound
+    delay (1000) % delay of 1 second
+    Pic.Draw (blankDicePic, 500, 600, picMerge)
+    % intstr changes integer to string
+    % this is done since only strings are allowed for the Font.Draw text
+    Font.Draw (intstr (num), 525, 625, fontRoll, 30)
+    DiceNum := Pic.New (500, 600, 700, 800)
+    Sprite.ChangePic (DiceSprite, DiceNum)
+    finishedDice := true
+end DiceChange
+
+
+
+% checkUp checks if the player has to move up, based on if they're in certain boxes
+procedure checkUp (var x, y : int)
+    up := false
+    if x > 600 and x < 700 then
+        if y > 0 and y < 100 or y > 200 and y < 300 or y > 400 and y < 500 then
+            up := true
+        end if
+    elsif x > 100 and x < 200 then
+        if y > 100 and y < 200 or y > 300 and y < 400 then
+            up := true
+        end if
+    end if
+end checkUp
+
+% checkDirection determines if the player moves right or left
+% this is done based on the row the player is on
+procedure checkDirection (var y : int)
+    if y > 0 and y < 100 or y > 200 and y < 300 or y > 400 and y < 500 then
+        change := 100
+    else
+        change := -100
+    end if
+end checkDirection
+
+% checkWin sees if the player won, which is if they landed on box 36
+procedure checkWin (var x, y : int)
+    if x > 100 and x < 200 and y > 500 and y < 600 then
+        win := true
+    else
+        win := false
+    end if
+end checkWin
+
+
+% TURN %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+procedure turn (var sprite, pic, x, y : int)
+    Sprite.ChangePic (DiceSprite, rollMe) % display the die which says 'roll me'
+    loop
+        Mouse.Where (xMouse, yMouse, button)
+        % if the user clicks on the die
+        if xMouse > 500 and xMouse < 650 and yMouse > 600 and yMouse < 750 and button = 1 then
+            exit % the loop is only exited when the user 'rolls' the die
+        end if
+    end loop
+
+    randint (roll, 1, 6) % roll a random integer from 1 to 6
+
+    DiceChange (roll)
+    
+    finishedWalk := false
+    fork WalkSound % start playing the walk sound
+
+    for move : 1 .. roll
+        checkUp (x, y)
+        checkDirection (y)
+        if up  then %if it goes of the board edge
+            y := y + 100
+        else
+            x := x + change
+        end if
+        Sprite.Animate (sprite, pic, x, y, true)
+        delay (250)
+        checkWin (x, y)
+        exit when win
+    end for
+
+    finishedWalk := true
+    Music.PlayFileStop
+end turn
+
+
+% checkLadder checks if the player is on the bottom of a ladder, then brings it to the top of it
+procedure checkLadder (var sprite, pic, x, y : int)
+    if x > 500 and x < 600 and y > 0 and y < 100 then
+        x := 650
+        y := 250
+    elsif x > 100 and x < 200 and y > 100 and y < 200 then
+        x := 250
+        y := 350
+    elsif x > 400 and x < 500 and y > 200 and y < 300 then
+        x := 350
+        y := 450
+    end if
+    Sprite.Animate (sprite, pic, x, y, true)
+end checkLadder
+
+% checkSnake checks if the player is on the top of a snake, and brings it to the bottom of it
+procedure checkSnake (var sprite, pic, x, y : int)
+    finishedSnake := false
+    if x > 200 and x < 300 and y > 100 and y < 200 then
+        fork SnakeSound
+        x := 450
+        y := 50
+        Sprite.Animate (sprite, pic, x, y, true)
+        delay (1500)
+        finishedSnake := true
+        Music.PlayFileStop
+    elsif x > 600 and x < 700 and y > 400 and y < 500 then
+        fork SnakeSound
+        x := 350
+        y := 250
+        Sprite.Animate (sprite, pic, x, y, true)
+        delay (1500)
+        finishedSnake := true
+        Music.PlayFileStop
+    elsif x > 300 and x < 400 and y > 500 and y < 600 then
+        fork SnakeSound
+        x := 550
+        y := 450
+        Sprite.Animate (sprite, pic, x, y, true)
+        delay (1500)
+        finishedSnake := true
+        Music.PlayFileStop
+    end if
+end checkSnake
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% START OF THE OUTPUTTING PORTION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+% INTRODUCTION
+drawfill (250, 250, green, green)
+
+% display game title
+Font.Draw ("SNAKES AND", 25, 600, fontTitle, 94)
+Font.Draw ("LADDERS", 100, 500, fontTitle, 94)
+
+
+% play intro
+finishedIntro := false
+fork IntroMusic            % Start the background music
+Time.Delay (2600)              % Wait for 2.6 seconds
+% Stop the background music.
+finishedIntro := true                % The flag must be set first
+Music.PlayFileStop          % Music.PlayFile will return immediately
+
+
+finishedGame := false
+fork GameMusic
+
+% display options
+drawfillbox (295, 345, 520, 385, 191)
+Font.Draw ("Instructions", 300, 350, font2, white)
+drawfillbox (295, 295, 520, 335, 191)
+Font.Draw ("Play Game", 305, 300, font2, white)
+
+loop
+    loop
+        % locate where the mouse is
+        Mouse.Where (xMouse, yMouse, button)
+        % if user clicks on instruction box
+        if xMouse > 295 and xMouse < 520 and yMouse > 345 and yMouse < 385 and button = 1 then
+            cls
+            % instructions screen
+            drawfill (250, 250, 94, 94)
+            Font.Draw ("Instructions", 10, 600, fontTitle, green)
+            Font.Draw ("Welcome to this 2 player snakes and ladders game.", 50, 550, font4, black)
+            Font.Draw ("Click on the die to roll it. If you land on a snake,", 50, 520, font4, black)
+            Font.Draw ("you'll slide down it. But, if you land on a ladder,", 50, 490, font4, black)
+            Font.Draw ("you get to climb up it. First one to the top wins!", 50, 460, font4, black)
+
+            drawfillbox (295, 295, 520, 335, 191)
+            Font.Draw ("Play Game", 305, 300, font2, white)
+            loop
+                Mouse.Where (xMouse, yMouse, button)
+                if xMouse > 295 and xMouse < 520 and yMouse > 295 and yMouse < 335 and button = 1 then
+                    EndIntro := true
+                    exit when EndIntro
+                end if
+            end loop
+            exit
+        elsif xMouse > 295 and xMouse < 520 and yMouse > 295 and yMouse < 335 and button = 1 then
+            EndIntro := true
+            exit when EndIntro
+        end if
+    end loop
+    exit when EndIntro
+end loop
+
+finishedGame := true
+Music.PlayFileStop
+
+delay (500)
+cls
+
+
+
+% START OF GAME
+loop
+
+    pick := 0
+    drawfill (250, 250, 100, 100)
+    % draw the game board
+    Pic.Draw (board, 100, 0, picCopy)
+    % initialize the variables for the player's sprite coordinates)
+    x1 := 50
+    x2 := 50
+    y1 := 50
+    y2 := 50
+    Sprite.SetPosition (player1Sprite, x1, y1, true)
+    Sprite.SetPosition (player2Sprite, x2, y2, true)
+
+    Sprite.Show (player1Sprite)
+    Sprite.Show (player2Sprite)
+    Sprite.Show (DiceSprite)
+
+    loop
+        pick := pick + 1
+        DisplayTurn
+        if (pick mod 2) = 0 then %if the pick value is even
+            Sprite.SetHeight (player2Sprite, 2)
+            Sprite.SetHeight (player1Sprite, 1)
+            turn (player2Sprite, player2Pic, x2, y2)
+            checkLadder (player2Sprite, player2Pic, x2, y2)
+            checkSnake (player2Sprite, player2Pic, x2, y2)
+        else % if pick value is odd
+            Sprite.SetHeight (player1Sprite, 2)
+            Sprite.SetHeight (player2Sprite, 1)
+            turn (player1Sprite, player1Pic, x1, y1)
+            checkLadder (player1Sprite, player1Pic, x1, y1)
+            checkSnake (player1Sprite, player1Pic, x1, y1)
+        end if
+        delay (500)
+        exit when win % exit when someone wins
+    end loop
+
+
+    delay (1000)
+    cls
+    % hide the sprites (2 players and the dice)
+    Sprite.Hide (player1Sprite)
+    Sprite.Hide (player2Sprite)
+    Sprite.Hide (DiceSprite)
+
+
+
+    % Winner Screen %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    var winnerPic, winnerSprite : int
+    var xWinner, yWinner : int := 0
+    var xWinnerChange, yWinnerChange : int := 5
+
+    if pick mod 2 = 0 then
+        drawfill (250, 250, 84, 84)
+        Font.Draw ("Player 2", 0, 75, font3, purple)
+        Font.Draw ("won!", 80, 5, font3, purple)
+    else
+        drawfill (250, 250, 66, 66)
+        Font.Draw ("Player 1", 0, 75, font3, 41)
+        Font.Draw ("won!", 80, 5, font3, 41)
+    end if
+
+    winnerPic := Pic.New (0, 0, 420, 150)
+    cls
+    winnerSprite := Sprite.New (winnerPic)
+    Sprite.SetPosition (winnerSprite, 0, 0, false)
+
+    finishedCheer := false
+    fork CheeringMusic        % Start the win music
+
+    if pick mod 2 = 0 then
+        drawfill (250, 250, 84, 84)
+    else
+        drawfill (250, 250, 66, 66)
+    end if
+
+    Sprite.Show (winnerSprite)
+
+    for winrun : 1 .. 100
+        Sprite.Animate (winnerSprite, winnerPic, xWinner, yWinner, false)
+        if xWinner < 0 or xWinner > (maxx - 420) then
+            xWinnerChange := -xWinnerChange
+        end if
+        if yWinner < 0 or yWinner > (maxy - 150) then
+            yWinnerChange := -yWinnerChange
+        end if
+        delay (50)
+        xWinner := xWinner + xWinnerChange
+        yWinner := yWinner + yWinnerChange
+    end for
+
+    Sprite.SetPosition (winnerSprite, (maxx div 2), ((maxy div 4) * 3), true)
+    Time.Delay (1000) % delay of 1 second
+    % Stop the win music
+    finishedCheer := true
+    Music.PlayFileStop
+
+
+    % ask user if they want to play again
+    Font.Draw ("Play again?", 200, 400, font1, 195)
+    drawfillbox (295, 295, 370, 335, 191)
+    drawfillbox (395, 295, 455, 335, 191)
+    Font.Draw ("Yes", 300, 300, font2, white)
+    Font.Draw ("No", 400, 300, font2, white)
+
+    loop
+        % if user clicks 'yes'
+        Mouse.Where (xMouse, yMouse, button)
+        if xMouse > 295 and xMouse < 370 and yMouse > 295 and yMouse < 335 and button = 1 then
+            Sprite.Hide (winnerSprite)
+            cls
+            exit
+            % if user clicks 'no'
+        elsif xMouse > 395 and xMouse < 455 and yMouse > 295 and yMouse < 335 and button = 1 then
+            Sprite.Hide (winnerSprite)
+            cls
+            % initialize ExitGame
+            ExitGame := true
+            exit when ExitGame
+        end if
+    end loop
+
+    % exit game loop when ExitGame
+    exit when ExitGame
+
+end loop
+
+cls
+
+
+
+% END SCREEN %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+fork EndMusic
+drawfill (0, 0, 63, 63)
+Font.Draw ("END", 250, 505, fontEnd, red)
+Font.Draw ("GAME", 200, 405, fontEnd, red)
+
+
+delay (1000)
+
+
+% this will draw a bunch of lines in white, grey or black
+var yEndLine, yEndUp, yEndDown, cEnd : int
+yEndDown := maxy
+yEndUp := 0
+loop
+    randint (cEnd, 15, 31)
+    drawline (0, yEndDown, maxx, yEndDown, cEnd)
+    drawline (0, yEndUp, maxx, yEndUp, cEnd)
+    delay (5)
+    yEndDown := yEndDown - 2
+    yEndUp := yEndUp + 2
+    exit when yEndDown < 0 or yEndUp > maxy
+end loop
+
+finishedEnd := true
+Music.PlayFileStop
