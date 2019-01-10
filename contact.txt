@@ -8,3 +8,22 @@ Fisher
 613-598-7891
 sam.f@yahoo.com
 
+sydney
+taylor
+613-444-5555
+sydney@yahoo.com
+
+Victoria
+Reed
+613-322-7378
+victoria@gmail.com
+
+Nick
+Brown
+613-459-7777
+nick@gmail.com
+
+john
+smith
+613-777-8889
+johns@gmail.com
